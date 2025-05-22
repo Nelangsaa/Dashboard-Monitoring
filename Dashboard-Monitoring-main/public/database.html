@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>kodokzuma</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-SgOJa3DmI69IUzQ2PVdRZhwQ+dy64/BUtbMJw1MZ8t5HZApcHrRKUc4W0kG879m7"
+      crossorigin="anonymous"
+    />
+    <!-- data_control.js-->
+    <script type="module" src="data.js"></script>
+
+    <style>
+      .table tr {
+        font-family: "Courier New", Courier, monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- navbar -->
+
+    <nav class="navbar navbar-expand-lg bg-dark" data-bs-theme="dark">
+      <div class="container">
+        <a class="navbar-brand" href="#">Web Pemantauan</a>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNav"
+          aria-controls="navbarNav"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav ms-auto">
+            <li class="nav-item">
+              <a
+                class="nav-link active"
+                aria-current="page"
+                href="dashboard.html"
+                >Monitoring</a
+              >
+            </li>
+            <li class="nav-item">
+              <a class="nav-link active" aria-current="page" href="control.html"
+                >Control</a
+              >
+            </li>
+            <li class="nav-item">
+              <a
+                class="nav-link active"
+                aria-current="page"
+                href="database.html"
+                >Database</a
+              >
+            </li>
+            <li class="nav-item">
+              <a
+                class="nav-link active"
+                id="logoutBtn"
+                aria-current="page"
+                href="index.html"
+                >Logout</a
+              >
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <!-- header -->
+    <section class="container header pt-3">
+      <h2>Database</h2>
+      <hr />
+    </section>
+
+    <!-- database -->
+    <section class="container">
+      <table class="table table-striped table-bordered table-hover border-dark">
+        <thead>
+          <tr class="table-dark">
+            <th>No</th>
+            <th>Date</th>
+            <th>Time</th>
+            <th>Temperature</th>
+            <th>Humidity</th>
+          </tr>
+        </thead>
+        <tbody id="dataTable"></tbody>
+      </table>
+    </section>
+
+    <script>/* =============== BAGIAN 1: Import Modul Firebase =============== */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-app.js";
+import {
+  getDatabase,
+  ref,
+  query,
+  orderByKey,
+  limitToLast,
+  onValue,
+} from "https://www.gstatic.com/firebasejs/9.19.1/firebase-database.js";
+
+/* =============== BAGIAN 2: Konfigurasi Firebase =============== */
+const firebaseConfig = {
+    apiKey: "AIzaSyBZiJkvsqKnv4IJBphsBiqbco5Zp5_TUOM",
+    authDomain: "tamasadepan.firebaseapp.com",
+    databaseURL: "https://tamasadepan-default-rtdb.firebaseio.com",
+    projectId: "tamasadepan",
+    storageBucket: "tamasadepan.firebasestorage.app",
+    messagingSenderId: "168503052372",
+    appId: "1:168503052372:web:6c53f1afbd35d7748085c1",
+    measurementId: "G-DYL9TD5BR3"
+  };
+
+// Inisialisasi Firebase
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+/* =============== BAGIAN 3: Fungsi Mendapatkan 10 Data Terbaru =============== */
+let lastData = ""; // Simpan data terakhir
+
+function fetchLatestData() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  const formattedDate = `${year}-${month}-${day}`;
+
+  const dataRef = query(
+    ref(db, `data_sensor/${formattedDate}`),
+    orderByKey(),
+    limitToLast(10)
+  );
+
+  onValue(dataRef, (snapshot) => {
+    if (!snapshot.exists()) return;
+
+    const data = [];
+    snapshot.forEach((childSnapshot) => {
+      const key = childSnapshot.key;
+      const values = childSnapshot.val();
+      data.push({ time: key, ...values });
+    });
+
+    // Urutkan dan tampilkan
+    data.reverse();
+
+    const fragment = document.createDocumentFragment();
+    data.forEach((entry, index) => {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${index + 1}</td>
+        <td>${formattedDate}</td>
+        <td>${entry.time}</td>
+        <td>${entry.suhu?.toFixed(1) ?? "-"}</td>
+        <td>${entry.kelembapan?.toFixed(1) ?? "-"}</td>
+      `;
+      fragment.appendChild(row);
+    });
+
+    const newDataString = JSON.stringify(data);
+    if (newDataString !== lastData) {
+      const tableBody = document.getElementById("dataTable");
+      if (tableBody) {
+        tableBody.innerHTML = "";
+        tableBody.appendChild(fragment);
+        lastData = newDataString;
+      }
+    }
+  });
+}
+
+/* =============== BAGIAN 4: Jalankan Fungsi =============== */
+fetchLatestData();
+</script>
+
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-k6d4wzSIapyDyv1kpU366/PK5hCdSbCRGRCMv+eplOQJWyd1fbcAu9OCUj5zNLiq"
+      crossorigin="anonymous"
+    ></script>
+  </body>
+</html>
